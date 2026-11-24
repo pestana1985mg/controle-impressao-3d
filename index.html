@@ -1,0 +1,1845 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>A1 Mini Studio — Controle de Vendas e Lucro 3D</title>
+
+  <!-- Fonte Inter para leitura limpa e moderna -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Chart.js via CDN para visualização financeira -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+  <script>
+    /**
+     * Configuração do Tailwind CSS com suporte a dark mode via classe 'dark'
+     * e paleta inspirada em engenharia / impressão 3D (esmeralda Bambu + slate).
+     */
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              400: '#34d399',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+            }
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    /* Ajustes suaves de barra de rolagem e números tabulares */
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(100, 116, 139, 0.35);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(100, 116, 139, 0.55);
+    }
+  </style>
+</head>
+
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 min-h-screen transition-colors duration-200">
+  <!-- =====================================================================
+       SEÇÃO 1: CABEÇALHO PRINCIPAL & AÇÕES GLOBAIS
+       ===================================================================== -->
+  <header class="sticky top-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur border-b border-slate-200 dark:border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-3">
+      <!-- Identidade do App -->
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="w-10 h-10 rounded-xl bg-brand-600 text-white flex items-center justify-center shadow-sm shrink-0">
+          <!-- Ícone SVG de impressora / cubo 3D -->
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3.27 6.96 12 12.01l8.73-5.05M12 22.08V12" />
+          </svg>
+        </div>
+        <div class="min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            <h1 class="text-base sm:text-lg font-bold tracking-tight truncate">A1 Mini Studio — Controle 3D</h1>
+            <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-brand-100 text-brand-700 dark:bg-brand-950 dark:text-brand-300 border border-brand-200 dark:border-brand-800">
+              Bambu Lab A1 Mini
+            </span>
+          </div>
+          <p class="text-xs text-slate-500 dark:text-slate-400 truncate">
+            Vendas, custos reais, mão de obra e lucro líquido em tempo real
+          </p>
+        </div>
+      </div>
+
+      <!-- Barra de Ações Rápidas -->
+      <div class="flex items-center gap-2 flex-wrap">
+        <button id="btnOpenNewSale" type="button"
+          class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold bg-brand-600 hover:bg-brand-700 active:scale-[0.99] text-white shadow-sm transition cursor-pointer">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          <span>Nova Venda</span>
+        </button>
+
+        <button id="btnToggleSettings" type="button"
+          class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition cursor-pointer">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <span class="hidden sm:inline">Configurações</span>
+        </button>
+
+        <button id="btnToggleTheme" type="button" title="Alternar tema claro/escuro"
+          class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition cursor-pointer">
+          <!-- Sol (visível no dark) -->
+          <svg id="iconSun" class="w-4 h-4 hidden dark:block" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+          <!-- Lua (visível no light) -->
+          <svg id="iconMoon" class="w-4 h-4 block dark:hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Banner de feedback não-bloqueante (substitui alert/confirm) -->
+  <div id="toastBanner" class="fixed bottom-4 right-4 z-50 max-w-sm hidden">
+    <div id="toastContent" class="px-4 py-3 rounded-2xl shadow-lg border text-sm font-medium flex items-center gap-2.5 bg-slate-900 text-white border-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:border-slate-300">
+      <span id="toastMessage"></span>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       CONTEÚDO PRINCIPAL
+       ===================================================================== -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- ===================================================================
+         SEÇÃO 2: KPIs / CARDS DE RESUMO EM TEMPO REAL
+         =================================================================== -->
+    <section aria-label="Resumo financeiro" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <!-- KPI 1: Faturamento Bruto -->
+      <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200/80 dark:border-slate-800 shadow-xs">
+        <div class="flex items-center justify-between text-xs font-medium text-slate-500 dark:text-slate-400">
+          <span>Faturamento Bruto</span>
+          <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+        </div>
+        <p id="kpiGross" class="mt-2 text-xl sm:text-2xl font-extrabold tabular-nums text-slate-900 dark:text-white">R$ 0,00</p>
+        <p id="kpiSalesCount" class="mt-1 text-[11px] text-slate-400">0 lançamentos exibidos</p>
+      </div>
+
+      <!-- KPI 2: Custos Totais (Taxas/Frete + Material/Insumos + Energia/Manutenção) -->
+      <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200/80 dark:border-slate-800 shadow-xs">
+        <div class="flex items-center justify-between text-xs font-medium text-slate-500 dark:text-slate-400">
+          <span>Custos Totais</span>
+          <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+        </div>
+        <p id="kpiCosts" class="mt-2 text-xl sm:text-2xl font-extrabold tabular-nums text-rose-600 dark:text-rose-400">R$ 0,00</p>
+        <p class="mt-1 text-[11px] text-slate-400 truncate" title="Taxas/Frete + Material/Insumos + Energia/Manutenção">
+          Taxas + Mat. + Energ./Manut.
+        </p>
+      </div>
+
+      <!-- KPI 3: Mão de Obra (Seu tempo) -->
+      <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200/80 dark:border-slate-800 shadow-xs">
+        <div class="flex items-center justify-between text-xs font-medium text-slate-500 dark:text-slate-400">
+          <span>Mão de Obra (Seu Tempo)</span>
+          <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+        </div>
+        <p id="kpiLabor" class="mt-2 text-xl sm:text-2xl font-extrabold tabular-nums text-amber-600 dark:text-amber-400">R$ 0,00</p>
+        <p class="mt-1 text-[11px] text-slate-400">Remuneração do seu trabalho</p>
+      </div>
+
+      <!-- KPI 4: Lucro Líquido -->
+      <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-brand-200 dark:border-brand-900/60 shadow-xs ring-1 ring-brand-500/10">
+        <div class="flex items-center justify-between text-xs font-medium text-brand-700 dark:text-brand-400">
+          <span>Lucro Líquido</span>
+          <span class="w-2 h-2 rounded-full bg-brand-500"></span>
+        </div>
+        <p id="kpiNetProfit" class="mt-2 text-xl sm:text-2xl font-extrabold tabular-nums text-brand-600 dark:text-brand-400">R$ 0,00</p>
+        <p class="mt-1 text-[11px] text-slate-400">Após custos e mão de obra</p>
+      </div>
+
+      <!-- KPI 5: Margem Líquida (%) -->
+      <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200/80 dark:border-slate-800 shadow-xs sm:col-span-2 lg:col-span-1">
+        <div class="flex items-center justify-between text-xs font-medium text-slate-500 dark:text-slate-400">
+          <span>Margem Líquida</span>
+          <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+        </div>
+        <p id="kpiMargin" class="mt-2 text-xl sm:text-2xl font-extrabold tabular-nums text-indigo-600 dark:text-indigo-400">0,0%</p>
+        <p id="kpiAvgTicket" class="mt-1 text-[11px] text-slate-400">Ticket médio: R$ 0,00</p>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         SEÇÃO 3: FORMULÁRIO INTERATIVO DE LANÇAMENTO / EDIÇÃO + CALCULADORA
+         =================================================================== -->
+    <section id="saleFormCard" class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <span id="formBadge" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-brand-100 text-brand-800 dark:bg-brand-950 dark:text-brand-300">
+            NOVO LANÇAMENTO
+          </span>
+          <h2 id="formTitle" class="text-base font-bold text-slate-900 dark:text-white">Registrar Venda de Impressão 3D</h2>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="btnToggleCalculator" type="button"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/50 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 transition cursor-pointer">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+            <span>Calculadora A1 Mini</span>
+          </button>
+          <button id="btnCancelEdit" type="button"
+            class="hidden px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 transition cursor-pointer">
+            Cancelar Edição
+          </button>
+        </div>
+      </div>
+
+      <!-- Calculadora Rápida Opcional (Estimativa de Filamento, Energia/Manutenção e Tempo) -->
+      <div id="quickCalcPanel" class="hidden bg-amber-50/60 dark:bg-amber-950/20 border-b border-amber-200/70 dark:border-amber-900/50 p-5">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h3 class="text-sm font-bold text-amber-900 dark:text-amber-200">Calculadora Rápida de Custos (A1 Mini)</h3>
+            <p class="text-xs text-amber-700 dark:text-amber-300/80">
+              Preencha gramas, horas de impressão ou minutos de trabalho e envie direto para o formulário.
+            </p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- Estimativa 1: Material -->
+          <div class="bg-white dark:bg-slate-900 rounded-xl p-3.5 border border-amber-200/80 dark:border-amber-900/60 space-y-2.5">
+            <div class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">1. Filamento + Perda</div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label for="calcGrams" class="block text-[11px] text-slate-500 mb-1">Peso na peça (g)</label>
+                <input id="calcGrams" type="number" step="0.1" min="0" placeholder="Ex: 85"
+                  class="w-full px-2.5 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 tabular-nums" />
+              </div>
+              <div>
+                <label for="calcKgPrice" class="block text-[11px] text-slate-500 mb-1">Preço do kg (R$)</label>
+                <input id="calcKgPrice" type="number" step="0.01" min="0"
+                  class="w-full px-2.5 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 tabular-nums" />
+              </div>
+            </div>
+            <div class="flex items-center justify-between pt-1">
+              <span class="text-xs font-semibold text-slate-700 dark:text-slate-200 tabular-nums">
+                Estimado: <strong id="calcMaterialResult">R$ 0,00</strong>
+              </span>
+              <button id="btnApplyMaterial" type="button"
+                class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-brand-600 hover:bg-brand-700 text-white transition cursor-pointer">
+                Usar no Campo
+              </button>
+            </div>
+          </div>
+
+          <!-- Estimativa 2: Energia + Manutenção -->
+          <div class="bg-white dark:bg-slate-900 rounded-xl p-3.5 border border-amber-200/80 dark:border-amber-900/60 space-y-2.5">
+            <div class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">2. Energia + Manutenção</div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label for="calcPrintHours" class="block text-[11px] text-slate-500 mb-1">Tempo impres. (h)</label>
+                <input id="calcPrintHours" type="number" step="0.1" min="0" placeholder="Ex: 4.5"
+                  class="w-full px-2.5 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 tabular-nums" />
+              </div>
+              <div>
+                <label for="calcHourlyRate" class="block text-[11px] text-slate-500 mb-1">Taxa/hora (R$/h)</label>
+                <input id="calcHourlyRate" type="number" step="0.01" min="0"
+                  class="w-full px-2.5 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 tabular-nums" />
+              </div>
+            </div>
+            <div class="flex items-center justify-between pt-1">
+              <span class="text-xs font-semibold text-slate-700 dark:text-slate-200 tabular-nums">
+                Estimado: <strong id="calcEnergyResult">R$ 0,00</strong>
+              </span>
+              <button id="btnApplyEnergy" type="button"
+                class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-brand-600 hover:bg-brand-700 text-white transition cursor-pointer">
+                Usar no Campo
+              </button>
+            </div>
+          </div>
+
+          <!-- Estimativa 3: Mão de Obra -->
+          <div class="bg-white dark:bg-slate-900 rounded-xl p-3.5 border border-amber-200/80 dark:border-amber-900/60 space-y-2.5">
+            <div class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">3. Mão de Obra (Seu Tempo)</div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label for="calcWorkMinutes" class="block text-[11px] text-slate-500 mb-1">Minutos dedicados</label>
+                <input id="calcWorkMinutes" type="number" step="1" min="0" placeholder="Ex: 30"
+                  class="w-full px-2.5 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 tabular-nums" />
+              </div>
+              <div>
+                <label for="calcLaborRate" class="block text-[11px] text-slate-500 mb-1">Sua hora (R$/h)</label>
+                <input id="calcLaborRate" type="number" step="0.01" min="0"
+                  class="w-full px-2.5 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 tabular-nums" />
+              </div>
+            </div>
+            <div class="flex items-center justify-between pt-1">
+              <span class="text-xs font-semibold text-slate-700 dark:text-slate-200 tabular-nums">
+                Estimado: <strong id="calcLaborResult">R$ 0,00</strong>
+              </span>
+              <button id="btnApplyLabor" type="button"
+                class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-brand-600 hover:bg-brand-700 text-white transition cursor-pointer">
+                Usar no Campo
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Formulário Principal -->
+      <form id="saleForm" class="p-5 space-y-4">
+        <input type="hidden" id="editingId" value="" />
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <!-- Data -->
+          <div>
+            <label for="saleDate" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+              Data *
+            </label>
+            <input id="saleDate" type="date" required
+              class="w-full px-3 py-2 rounded-xl text-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition" />
+          </div>
+
+          <!-- Peça / Projeto -->
+          <div class="sm:col-span-2 lg:col-span-2">
+            <label for="saleItem" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+              Peça / Projeto *
+            </label>
+            <input id="saleItem" type="text" required placeholder="Ex: Suporte de parede para controle + ímãs"
+              class="w-full px-3 py-2 rounded-xl text-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition" />
+          </div>
+
+          <!-- Material / Filamento -->
+          <div>
+            <label for="saleMaterial" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+              Material / Filamento
+            </label>
+            <input id="saleMaterial" type="text" list="materialSuggestions" placeholder="Ex: PETG"
+              class="w-full px-3 py-2 rounded-xl text-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition" />
+            <datalist id="materialSuggestions"></datalist>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+          <!-- Cliente / Canal -->
+          <div class="sm:col-span-2">
+            <label for="saleChannel" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+              Cliente / Canal
+            </label>
+            <input id="saleChannel" type="text" list="channelSuggestions" placeholder="Ex: WhatsApp - João"
+              class="w-full px-3 py-2 rounded-xl text-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition" />
+            <datalist id="channelSuggestions"></datalist>
+            <!-- Chips rápidos de canal -->
+            <div id="quickChannelChips" class="flex flex-wrap gap-1.5 mt-1.5"></div>
+          </div>
+
+          <!-- Valor da Venda (Bruto) -->
+          <div>
+            <label for="saleGross" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+              Valor Bruto (R$) *
+            </label>
+            <input id="saleGross" type="number" step="0.01" min="0" required placeholder="0,00"
+              class="w-full px-3 py-2 rounded-xl text-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 tabular-nums focus:ring-2 focus:ring-brand-500 outline-none transition" />
+          </div>
+
+          <!-- Taxas / Frete -->
+          <div>
+            <label for="saleFees" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+              Taxas / Frete (R$)
+            </label>
+            <input id="saleFees" type="number" step="0.01" min="0" placeholder="0,00"
+              class="w-full px-3 py-2 rounded-xl text-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 tabular-nums focus:ring-2 focus:ring-brand-500 outline-none transition" />
+          </div>
+
+          <!-- Custo Material + Insumos -->
+          <div>
+            <label for="saleMaterialCost" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+              Material + Insumos (R$)
+            </label>
+            <input id="saleMaterialCost" type="number" step="0.01" min="0" placeholder="0,00"
+              class="w-full px-3 py-2 rounded-xl text-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 tabular-nums focus:ring-2 focus:ring-brand-500 outline-none transition" />
+          </div>
+
+          <!-- Energia + Manutenção -->
+          <div>
+            <label for="saleEnergyCost" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+              Energia + Manut. (R$)
+            </label>
+            <input id="saleEnergyCost" type="number" step="0.01" min="0" placeholder="0,00"
+              class="w-full px-3 py-2 rounded-xl text-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 tabular-nums focus:ring-2 focus:ring-brand-500 outline-none transition" />
+          </div>
+        </div>
+
+        <!-- Linha inferior do formulário: Mão de Obra + Prévia instantânea + Botão Salvar -->
+        <div class="pt-2 border-t border-slate-100 dark:border-slate-800 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div class="flex flex-wrap items-end gap-4">
+            <div class="w-44">
+              <label for="saleLaborCost" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                Mão de Obra (R$)
+              </label>
+              <input id="saleLaborCost" type="number" step="0.01" min="0" placeholder="0,00"
+                class="w-full px-3 py-2 rounded-xl text-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 tabular-nums focus:ring-2 focus:ring-brand-500 outline-none transition" />
+            </div>
+
+            <!-- Prévia ao vivo do lançamento -->
+            <div class="flex flex-wrap items-center gap-4 text-xs bg-slate-50 dark:bg-slate-800/70 px-3.5 py-2 rounded-xl border border-slate-200/70 dark:border-slate-700/70 tabular-nums">
+              <div>
+                <span class="text-slate-500 dark:text-slate-400">Custos:</span>
+                <strong id="previewCosts" class="text-rose-600 dark:text-rose-400 ml-1">R$ 0,00</strong>
+              </div>
+              <div>
+                <span class="text-slate-500 dark:text-slate-400">Lucro Líquido:</span>
+                <strong id="previewProfit" class="text-brand-600 dark:text-brand-400 ml-1">R$ 0,00</strong>
+              </div>
+              <div>
+                <span class="text-slate-500 dark:text-slate-400">Margem:</span>
+                <strong id="previewMargin" class="text-indigo-600 dark:text-indigo-400 ml-1">0,0%</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2.5">
+            <button id="btnClearForm" type="button"
+              class="px-4 py-2.5 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition cursor-pointer">
+              Limpar
+            </button>
+            <button id="btnSubmitSale" type="submit"
+              class="px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 shadow-sm transition cursor-pointer">
+              Salvar Lançamento
+            </button>
+          </div>
+        </div>
+      </form>
+    </section>
+
+    <!-- ===================================================================
+         SEÇÃO 4: GRÁFICO DE DISTRIBUIÇÃO FINANCEIRA + DADOS / BACKUP
+         =================================================================== -->
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Gráfico (ocupa 2 colunas no desktop) -->
+      <div class="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <div>
+            <h2 class="text-base font-bold text-slate-900 dark:text-white">Distribuição do Faturamento</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+              Para onde vai cada real vendido nos lançamentos filtrados
+            </p>
+          </div>
+          <span class="text-xs font-medium px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+            Visão Consolidada
+          </span>
+        </div>
+
+        <div class="relative h-64 sm:h-72 w-full flex items-center justify-center">
+          <canvas id="financeChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Painel de Persistência, Backup e Customização Rápida (1 coluna) -->
+      <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col justify-between space-y-4">
+        <div class="space-y-3">
+          <h2 class="text-base font-bold text-slate-900 dark:text-white">Backup & Customização</h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+            Seus dados são salvos automaticamente neste navegador. Exporte JSON para backup/migração ou CSV para abrir no Excel e Google Sheets.
+          </p>
+
+          <div class="grid grid-cols-2 gap-2.5 pt-1">
+            <button id="btnExportJson" type="button"
+              class="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition cursor-pointer">
+              Exportar JSON
+            </button>
+
+            <label class="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition cursor-pointer text-center">
+              <span>Importar JSON</span>
+              <input id="inputImportJson" type="file" accept=".json,application/json" class="hidden" />
+            </label>
+
+            <button id="btnExportCsv" type="button"
+              class="col-span-2 px-3 py-2 rounded-xl text-xs font-semibold bg-brand-50 hover:bg-brand-100 dark:bg-brand-950/50 dark:hover:bg-brand-900/50 text-brand-700 dark:text-brand-300 border border-brand-200 dark:border-brand-800 transition cursor-pointer">
+              Exportar CSV (Excel / Google Sheets)
+            </button>
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
+          <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+            <span>Parâmetros atuais da A1 Mini:</span>
+            <button id="btnOpenSettingsFromCard" type="button" class="text-brand-600 dark:text-brand-400 font-semibold hover:underline cursor-pointer">
+              Editar
+            </button>
+          </div>
+          <div id="paramsSummaryBadge" class="text-xs bg-slate-50 dark:bg-slate-800/70 rounded-xl p-2.5 text-slate-600 dark:text-slate-300 space-y-1 tabular-nums">
+            <!-- Preenchido via JS -->
+          </div>
+          <button id="btnResetSamples" type="button"
+            class="w-full mt-1 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 transition cursor-pointer">
+            Carregar Exemplos / Resetar Dados
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         SEÇÃO 5: CONFIGURAÇÕES & PARÂMETROS PADRÃO (COLAPSÁVEL)
+         =================================================================== -->
+    <section id="settingsPanel" class="hidden bg-white dark:bg-slate-900 rounded-2xl p-5 border border-brand-200 dark:border-brand-800 shadow-sm space-y-5">
+      <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+        <div>
+          <h2 class="text-base font-bold text-slate-900 dark:text-white">Configurações & Parâmetros Padrão</h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400">
+            Ajuste os valores base da sua operação e personalize canais de venda e tipos de filamento.
+          </p>
+        </div>
+        <button id="btnCloseSettings" type="button"
+          class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 cursor-pointer">
+          Fechar
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div>
+          <label for="cfgFilamentKg" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+            Preço Padrão Filamento (R$/kg)
+          </label>
+          <input id="cfgFilamentKg" type="number" step="0.01" min="0"
+            class="w-full px-3 py-2 rounded-xl text-sm border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 tabular-nums" />
+        </div>
+
+        <div>
+          <label for="cfgWastePct" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+            Perda / Purga Filamento (%)
+          </label>
+          <input id="cfgWastePct" type="number" step="0.5" min="0" max="100"
+            class="w-full px-3 py-2 rounded-xl text-sm border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 tabular-nums" />
+        </div>
+
+        <div>
+          <label for="cfgHourlyEnergyMaint" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+            Energia + Manut. A1 Mini (R$/h)
+          </label>
+          <input id="cfgHourlyEnergyMaint" type="number" step="0.01" min="0"
+            class="w-full px-3 py-2 rounded-xl text-sm border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 tabular-nums" />
+        </div>
+
+        <div>
+          <label for="cfgLaborHour" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+            Valor da Sua Hora de Trabalho (R$/h)
+          </label>
+          <input id="cfgLaborHour" type="number" step="0.50" min="0"
+            class="w-full px-3 py-2 rounded-xl text-sm border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 tabular-nums" />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label for="cfgChannels" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+            Canais / Origens de Venda (separados por vírgula)
+          </label>
+          <input id="cfgChannels" type="text"
+            class="w-full px-3 py-2 rounded-xl text-sm border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800" />
+        </div>
+
+        <div>
+          <label for="cfgMaterials" class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+            Filamentos / Materiais (separados por vírgula)
+          </label>
+          <input id="cfgMaterials" type="text"
+            class="w-full px-3 py-2 rounded-xl text-sm border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800" />
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2">
+        <button id="btnSaveSettings" type="button"
+          class="px-5 py-2 rounded-xl text-sm font-bold bg-brand-600 hover:bg-brand-700 text-white shadow-sm transition cursor-pointer">
+          Salvar Configurações
+        </button>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         SEÇÃO 6: FILTROS E TABELA DE LANÇAMENTOS / VENDAS
+         =================================================================== -->
+    <section class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs overflow-hidden">
+      <!-- Barra de Filtros -->
+      <div class="p-5 border-b border-slate-100 dark:border-slate-800 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 class="text-base font-bold text-slate-900 dark:text-white">Lançamentos de Vendas</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+              Busque por peça ou cliente, filtre por canal ou mês e gerencie cada pedido.
+            </p>
+          </div>
+          <button id="btnResetFilters" type="button"
+            class="text-xs font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white cursor-pointer">
+            Limpar filtros
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <!-- Busca textual -->
+          <div class="lg:col-span-2">
+            <input id="filterSearch" type="search" placeholder="Buscar por peça, projeto ou cliente..."
+              class="w-full px-3.5 py-2 rounded-xl text-sm border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-brand-500 outline-none" />
+          </div>
+
+          <!-- Filtro por Canal -->
+          <div>
+            <select id="filterChannel"
+              class="w-full px-3 py-2 rounded-xl text-sm border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-brand-500 outline-none">
+              <option value="">Todos os canais</option>
+            </select>
+          </div>
+
+          <!-- Filtro por Mês (AAAA-MM) -->
+          <div>
+            <select id="filterMonth"
+              class="w-full px-3 py-2 rounded-xl text-sm border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-brand-500 outline-none">
+              <option value="">Todos os meses</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabela Responsiva -->
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-50/90 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              <th class="py-3 px-3.5 whitespace-nowrap">Data</th>
+              <th class="py-3 px-3.5 min-w-[180px]">Peça / Projeto</th>
+              <th class="py-3 px-3.5 whitespace-nowrap">Cliente / Canal</th>
+              <th class="py-3 px-3.5 whitespace-nowrap">Material</th>
+              <th class="py-3 px-3.5 text-right whitespace-nowrap">Valor Bruto</th>
+              <th class="py-3 px-3.5 text-right whitespace-nowrap">Taxas/Frete</th>
+              <th class="py-3 px-3.5 text-right whitespace-nowrap">Mat.+Insumos</th>
+              <th class="py-3 px-3.5 text-right whitespace-nowrap">Energ.+Manut.</th>
+              <th class="py-3 px-3.5 text-right whitespace-nowrap">Mão de Obra</th>
+              <th class="py-3 px-3.5 text-right whitespace-nowrap">Custo Total</th>
+              <th class="py-3 px-3.5 text-right whitespace-nowrap">Lucro Líquido</th>
+              <th class="py-3 px-3.5 text-right whitespace-nowrap">Margem (%)</th>
+              <th class="py-3 px-3.5 text-center whitespace-nowrap">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="salesTableBody" class="divide-y divide-slate-100 dark:divide-slate-800/80 text-xs sm:text-sm tabular-nums">
+            <!-- Linhas geradas dinamicamente via JS -->
+          </tbody>
+          <tfoot id="salesTableFoot" class="bg-slate-50 dark:bg-slate-800/80 border-t-2 border-slate-200 dark:border-slate-700 font-bold text-xs sm:text-sm tabular-nums">
+            <!-- Totais consolidados gerados via JS -->
+          </tfoot>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- =====================================================================
+       MODAL DE CONFIRMAÇÃO CUSTOMIZADO (SEM window.confirm)
+       ===================================================================== -->
+  <div id="confirmModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-5 border border-slate-200 dark:border-slate-800 shadow-xl space-y-4">
+      <h3 id="confirmTitle" class="text-base font-bold text-slate-900 dark:text-white">Confirmar ação</h3>
+      <p id="confirmMessage" class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed"></p>
+      <div class="flex justify-end gap-2.5 pt-2">
+        <button id="btnConfirmCancel" type="button"
+          class="px-4 py-2 rounded-xl text-sm font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 cursor-pointer">
+          Cancelar
+        </button>
+        <button id="btnConfirmOk" type="button"
+          class="px-4 py-2 rounded-xl text-sm font-bold bg-rose-600 hover:bg-rose-700 text-white cursor-pointer">
+          Confirmar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       JAVASCRIPT: ESTADO, CÁLCULOS, PERSISTÊNCIA, GRÁFICO E CUSTOMIZAÇÃO
+       ===================================================================== -->
+  <script>
+    /**
+     * Chaves de armazenamento no localStorage.
+     * Altere aqui caso queira rodar múltiplas versões ou lojas separadas no mesmo domínio.
+     */
+    const STORAGE_KEYS = {
+      SALES: 'a1mini_studio_sales_v1',
+      SETTINGS: 'a1mini_studio_settings_v1',
+      THEME: 'a1mini_studio_theme_v1'
+    };
+
+    /**
+     * Configurações padrão customizáveis pelo usuário.
+     * Pensadas para a realidade de quem começa com Bambu Lab A1 Mini no Brasil.
+     */
+    const DEFAULT_SETTINGS = {
+      filamentKgPrice: 110.00,     // Preço médio por kg de filamento (R$/kg)
+      wastePercent: 10,            // Margem de perda / purga / falhas (%)
+      hourlyEnergyMaint: 1.15,     // Estimativa combinada de energia + desgaste/manutenção por hora (R$/h)
+      laborHourRate: 30.00,        // Valor da sua hora de trabalho (R$/h)
+      channels: [
+        'WhatsApp',
+        'Mercado Livre',
+        'Shopee',
+        'Encomenda Direta',
+        'Instagram'
+      ],
+      materials: [
+        'PLA',
+        'PETG',
+        'TPU',
+        'PLA Silk'
+      ]
+    };
+
+    /**
+     * Exemplos realistas iniciais para o usuário já testar a aplicação na primeira visita.
+     * Datas relativas recentes para facilitar filtros por mês.
+     */
+    function getSampleSales() {
+      const today = new Date();
+      const isoOffset = (daysAgo) => {
+        const d = new Date(today);
+        d.setDate(d.getDate() - daysAgo);
+        return d.toISOString().slice(0, 10);
+      };
+
+      return [
+        {
+          id: 'sample-1',
+          date: isoOffset(1),
+          item: 'Suporte de Parede p/ Controle TV + 4 Ímãs',
+          channel: 'WhatsApp',
+          material: 'PETG',
+          gross: 48.00,
+          fees: 0.00,
+          materialCost: 9.80,
+          energyCost: 4.60,
+          laborCost: 10.00
+        },
+        {
+          id: 'sample-2',
+          date: isoOffset(3),
+          item: 'Caixa Organizada p/ ESP32 + Tampa Encaixe',
+          channel: 'Encomenda Direta',
+          material: 'PETG',
+          gross: 65.00,
+          fees: 2.50,
+          materialCost: 11.40,
+          energyCost: 5.75,
+          laborCost: 15.00
+        },
+        {
+          id: 'sample-3',
+          date: isoOffset(6),
+          item: 'Vaso Geométrico Espiral 18cm',
+          channel: 'Shopee',
+          material: 'PLA Silk',
+          gross: 54.90,
+          fees: 11.20,
+          materialCost: 14.50,
+          energyCost: 8.05,
+          laborCost: 7.50
+        },
+        {
+          id: 'sample-4',
+          date: isoOffset(10),
+          item: 'Adaptador Mangueira Aspirador Oficina (Engenharia)',
+          channel: 'Mercado Livre',
+          material: 'PETG',
+          gross: 89.00,
+          fees: 16.50,
+          materialCost: 18.20,
+          energyCost: 9.20,
+          laborCost: 22.50
+        },
+        {
+          id: 'sample-5',
+          date: isoOffset(14),
+          item: 'Bumper Protetor Flexível p/ Câmera / Sensor',
+          channel: 'Instagram',
+          material: 'TPU',
+          gross: 42.00,
+          fees: 1.50,
+          materialCost: 6.40,
+          energyCost: 3.45,
+          laborCost: 7.50
+        }
+      ];
+    }
+
+    // Estado global da aplicação
+    let state = {
+      sales: [],
+      settings: { ...DEFAULT_SETTINGS },
+      chartInstance: null,
+      pendingConfirmCallback: null
+    };
+
+    // =====================================================================
+    // FUNÇÕES UTILITÁRIAS DE FORMATAÇÃO (PT-BR / BRL / DD/MM/AAAA)
+    // =====================================================================
+    const brlFormatter = new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    });
+
+    const pctFormatter = new Intl.NumberFormat('pt-BR', {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1
+    });
+
+    function formatBRL(value) {
+      const num = Number(value) || 0;
+      return brlFormatter.format(num);
+    }
+
+    function formatPct(value) {
+      const num = Number.isFinite(value) ? value : 0;
+      return `${pctFormatter.format(num)}%`;
+    }
+
+    /**
+     * Converte data ISO 'AAAA-MM-DD' para padrão brasileiro 'DD/MM/AAAA'
+     * evitando deslocamento de fuso horário.
+     */
+    function formatDateBR(isoDate) {
+      if (!isoDate || !/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) return isoDate || '-';
+      const [y, m, d] = isoDate.split('-');
+      return `${d}/${m}/${y}`;
+    }
+
+    function getTodayISO() {
+      const now = new Date();
+      const offsetMs = now.getTimezoneOffset() * 60000;
+      return new Date(now.getTime() - offsetMs).toISOString().slice(0, 10);
+    }
+
+    function parseNum(inputId) {
+      const el = document.getElementById(inputId);
+      if (!el) return 0;
+      const val = parseFloat(el.value);
+      return Number.isFinite(val) && val >= 0 ? val : 0;
+    }
+
+    function escapeHTML(str) {
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    /**
+     * Exibe notificação discreta no canto da tela (sem usar alert()).
+     */
+    let toastTimeout = null;
+    function showToast(message, type = 'info') {
+      const banner = document.getElementById('toastBanner');
+      const content = document.getElementById('toastContent');
+      const msgEl = document.getElementById('toastMessage');
+
+      msgEl.textContent = message;
+      content.className = 'px-4 py-3 rounded-2xl shadow-lg border text-sm font-medium flex items-center gap-2.5 ' + (
+        type === 'error'
+          ? 'bg-rose-600 text-white border-rose-700'
+          : type === 'success'
+          ? 'bg-brand-600 text-white border-brand-700'
+          : 'bg-slate-900 text-white border-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:border-slate-300'
+      );
+
+      banner.classList.remove('hidden');
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        banner.classList.add('hidden');
+      }, 3200);
+    }
+
+    /**
+     * Abre modal de confirmação customizado (sem usar window.confirm()).
+     */
+    function openConfirmModal(title, message, onConfirm) {
+      state.pendingConfirmCallback = onConfirm;
+      document.getElementById('confirmTitle').textContent = title;
+      document.getElementById('confirmMessage').textContent = message;
+      const modal = document.getElementById('confirmModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeConfirmModal() {
+      state.pendingConfirmCallback = null;
+      const modal = document.getElementById('confirmModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    // =====================================================================
+    // REGRAS DE CÁLCULO FINANCEIRO DO NEGÓCIO
+    // =====================================================================
+    /**
+     * Calcula métricas derivadas de um lançamento individual:
+     * - costsTotal: Taxas/Frete + Material/Insumos + Energia/Manutenção
+     * - netProfit: Valor Bruto - Custos Totais - Mão de Obra
+     * - marginPct: (Lucro Líquido / Valor Bruto) * 100
+     */
+    function computeSaleMetrics(sale) {
+      const gross = Number(sale.gross) || 0;
+      const fees = Number(sale.fees) || 0;
+      const materialCost = Number(sale.materialCost) || 0;
+      const energyCost = Number(sale.energyCost) || 0;
+      const laborCost = Number(sale.laborCost) || 0;
+
+      const costsTotal = fees + materialCost + energyCost;
+      const netProfit = gross - costsTotal - laborCost;
+      const marginPct = gross > 0 ? (netProfit / gross) * 100 : 0;
+
+      return {
+        gross,
+        fees,
+        materialCost,
+        energyCost,
+        laborCost,
+        costsTotal,
+        netProfit,
+        marginPct
+      };
+    }
+
+    /**
+     * Consolida totais gerais para uma lista de vendas (filtrada ou completa).
+     */
+    function computeAggregateMetrics(salesList) {
+      return salesList.reduce((acc, sale) => {
+        const m = computeSaleMetrics(sale);
+        acc.gross += m.gross;
+        acc.fees += m.fees;
+        acc.materialCost += m.materialCost;
+        acc.energyCost += m.energyCost;
+        acc.laborCost += m.laborCost;
+        acc.costsTotal += m.costsTotal;
+        acc.netProfit += m.netProfit;
+        acc.count += 1;
+        return acc;
+      }, {
+        gross: 0,
+        fees: 0,
+        materialCost: 0,
+        energyCost: 0,
+        laborCost: 0,
+        costsTotal: 0,
+        netProfit: 0,
+        count: 0
+      });
+    }
+
+    // =====================================================================
+    // PERSISTÊNCIA (LOCALSTORAGE) E INICIALIZAÇÃO
+    // =====================================================================
+    function loadState() {
+      try {
+        const rawSettings = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+        if (rawSettings) {
+          const parsed = JSON.parse(rawSettings);
+          state.settings = {
+            ...DEFAULT_SETTINGS,
+            ...parsed,
+            channels: Array.isArray(parsed.channels) && parsed.channels.length
+              ? parsed.channels
+              : [...DEFAULT_SETTINGS.channels],
+            materials: Array.isArray(parsed.materials) && parsed.materials.length
+              ? parsed.materials
+              : [...DEFAULT_SETTINGS.materials]
+          };
+        }
+      } catch (err) {
+        console.error('Erro ao carregar configurações:', err);
+        state.settings = { ...DEFAULT_SETTINGS };
+      }
+
+      try {
+        const rawSales = localStorage.getItem(STORAGE_KEYS.SALES);
+        if (rawSales === null) {
+          // Primeira visita: carrega exemplos realistas e salva
+          state.sales = getSampleSales();
+          saveSales();
+        } else {
+          const parsedSales = JSON.parse(rawSales);
+          state.sales = Array.isArray(parsedSales) ? parsedSales : [];
+        }
+      } catch (err) {
+        console.error('Erro ao carregar lançamentos:', err);
+        state.sales = getSampleSales();
+      }
+    }
+
+    function saveSales() {
+      try {
+        localStorage.setItem(STORAGE_KEYS.SALES, JSON.stringify(state.sales));
+      } catch (err) {
+        console.error('Erro ao salvar vendas no localStorage:', err);
+        showToast('Não foi possível salvar localmente no navegador.', 'error');
+      }
+    }
+
+    function saveSettingsToStorage() {
+      try {
+        localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(state.settings));
+      } catch (err) {
+        console.error('Erro ao salvar configurações:', err);
+        showToast('Erro ao salvar configurações.', 'error');
+      }
+    }
+
+    function initTheme() {
+      const savedTheme = localStorage.getItem(STORAGE_KEYS.THEME);
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const shouldUseDark = savedTheme ? savedTheme === 'dark' : prefersDark;
+      document.documentElement.classList.toggle('dark', shouldUseDark);
+    }
+
+    function toggleTheme() {
+      const isDark = document.documentElement.classList.toggle('dark');
+      localStorage.setItem(STORAGE_KEYS.THEME, isDark ? 'dark' : 'light');
+      renderChart();
+    }
+
+    // =====================================================================
+    // FILTROS E ORDENAÇÃO
+    // =====================================================================
+    function getFilteredSales() {
+      const search = (document.getElementById('filterSearch').value || '').trim().toLowerCase();
+      const channel = document.getElementById('filterChannel').value;
+      const month = document.getElementById('filterMonth').value;
+
+      return state.sales
+        .filter((sale) => {
+          if (channel && sale.channel !== channel) return false;
+          if (month && !(sale.date || '').startsWith(month)) return false;
+          if (search) {
+            const haystack = `${sale.item || ''} ${sale.channel || ''} ${sale.material || ''}`.toLowerCase();
+            if (!haystack.includes(search)) return false;
+          }
+          return true;
+        })
+        .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    }
+
+    function syncFilterOptions() {
+      // Canais disponíveis (configurados + canais já existentes nas vendas)
+      const channelSelect = document.getElementById('filterChannel');
+      const currentChannel = channelSelect.value;
+      const channelSet = new Set([
+        ...state.settings.channels,
+        ...state.sales.map((s) => s.channel).filter(Boolean)
+      ]);
+
+      channelSelect.innerHTML = '<option value="">Todos os canais</option>';
+      Array.from(channelSet).sort((a, b) => a.localeCompare(b, 'pt-BR')).forEach((ch) => {
+        const opt = document.createElement('option');
+        opt.value = ch;
+        opt.textContent = ch;
+        channelSelect.appendChild(opt);
+      });
+      if (Array.from(channelSet).includes(currentChannel)) {
+        channelSelect.value = currentChannel;
+      }
+
+      // Meses disponíveis (AAAA-MM)
+      const monthSelect = document.getElementById('filterMonth');
+      const currentMonth = monthSelect.value;
+      const monthSet = new Set(
+        state.sales
+          .map((s) => (s.date || '').slice(0, 7))
+          .filter((m) => /^\d{4}-\d{2}$/.test(m))
+      );
+
+      const monthNames = [
+        'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+        'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'
+      ];
+
+      monthSelect.innerHTML = '<option value="">Todos os meses</option>';
+      Array.from(monthSet).sort().reverse().forEach((ym) => {
+        const [y, m] = ym.split('-');
+        const label = `${monthNames[parseInt(m, 10) - 1] || m}/${y}`;
+        const opt = document.createElement('option');
+        opt.value = ym;
+        opt.textContent = label;
+        monthSelect.appendChild(opt);
+      });
+      if (Array.from(monthSet).includes(currentMonth)) {
+        monthSelect.value = currentMonth;
+      }
+    }
+
+    function syncCustomListsAndDefaults() {
+      // Datalist de materiais
+      const matList = document.getElementById('materialSuggestions');
+      matList.innerHTML = '';
+      state.settings.materials.forEach((m) => {
+        const opt = document.createElement('option');
+        opt.value = m;
+        matList.appendChild(opt);
+      });
+
+      // Datalist de canais
+      const chList = document.getElementById('channelSuggestions');
+      chList.innerHTML = '';
+      state.settings.channels.forEach((c) => {
+        const opt = document.createElement('option');
+        opt.value = c;
+        chList.appendChild(opt);
+      });
+
+      // Chips rápidos de canal no formulário
+      const chipsWrap = document.getElementById('quickChannelChips');
+      chipsWrap.innerHTML = '';
+      state.settings.channels.forEach((ch) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = ch;
+        btn.className = 'px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 hover:bg-brand-100 hover:text-brand-800 dark:bg-slate-800 dark:hover:bg-brand-950 dark:hover:text-brand-300 text-slate-600 dark:text-slate-300 transition cursor-pointer';
+        btn.addEventListener('click', () => {
+          document.getElementById('saleChannel').value = ch;
+        });
+        chipsWrap.appendChild(btn);
+      });
+
+      // Valores padrão nos campos da calculadora rápida
+      document.getElementById('calcKgPrice').value = state.settings.filamentKgPrice.toFixed(2);
+      document.getElementById('calcHourlyRate').value = state.settings.hourlyEnergyMaint.toFixed(2);
+      document.getElementById('calcLaborRate').value = state.settings.laborHourRate.toFixed(2);
+
+      // Resumo de parâmetros no card lateral
+      document.getElementById('paramsSummaryBadge').innerHTML = `
+        <div class="flex justify-between"><span>Filamento base:</span><strong>${formatBRL(state.settings.filamentKgPrice)}/kg (+${state.settings.wastePercent}% perda)</strong></div>
+        <div class="flex justify-between"><span>Energia + Manut. A1 Mini:</span><strong>${formatBRL(state.settings.hourlyEnergyMaint)}/h</strong></div>
+        <div class="flex justify-between"><span>Sua hora de trabalho:</span><strong>${formatBRL(state.settings.laborHourRate)}/h</strong></div>
+      `;
+
+      // Preenche inputs do painel de Configurações
+      document.getElementById('cfgFilamentKg').value = state.settings.filamentKgPrice;
+      document.getElementById('cfgWastePct').value = state.settings.wastePercent;
+      document.getElementById('cfgHourlyEnergyMaint').value = state.settings.hourlyEnergyMaint;
+      document.getElementById('cfgLaborHour').value = state.settings.laborHourRate;
+      document.getElementById('cfgChannels').value = state.settings.channels.join(', ');
+      document.getElementById('cfgMaterials').value = state.settings.materials.join(', ');
+
+      recalculateQuickCalc();
+    }
+
+    // =====================================================================
+    // RENDERIZAÇÃO DE KPIs, TABELA E GRÁFICO
+    // =====================================================================
+    function renderKPIs(agg) {
+      document.getElementById('kpiGross').textContent = formatBRL(agg.gross);
+      document.getElementById('kpiSalesCount').textContent = `${agg.count} ${agg.count === 1 ? 'lançamento exibido' : 'lançamentos exibidos'}`;
+      document.getElementById('kpiCosts').textContent = formatBRL(agg.costsTotal);
+      document.getElementById('kpiLabor').textContent = formatBRL(agg.laborCost);
+
+      const netProfitEl = document.getElementById('kpiNetProfit');
+      netProfitEl.textContent = formatBRL(agg.netProfit);
+      netProfitEl.className = 'mt-2 text-xl sm:text-2xl font-extrabold tabular-nums ' + (
+        agg.netProfit >= 0
+          ? 'text-brand-600 dark:text-brand-400'
+          : 'text-rose-600 dark:text-rose-400'
+      );
+
+      const totalMarginPct = agg.gross > 0 ? (agg.netProfit / agg.gross) * 100 : 0;
+      const marginEl = document.getElementById('kpiMargin');
+      marginEl.textContent = formatPct(totalMarginPct);
+      marginEl.className = 'mt-2 text-xl sm:text-2xl font-extrabold tabular-nums ' + (
+        totalMarginPct >= 0
+          ? 'text-indigo-600 dark:text-indigo-400'
+          : 'text-rose-600 dark:text-rose-400'
+      );
+
+      const avgTicket = agg.count > 0 ? agg.gross / agg.count : 0;
+      document.getElementById('kpiAvgTicket').textContent = `Ticket médio: ${formatBRL(avgTicket)}`;
+    }
+
+    function renderTable(filteredSales, agg) {
+      const tbody = document.getElementById('salesTableBody');
+      const tfoot = document.getElementById('salesTableFoot');
+      tbody.innerHTML = '';
+
+      if (!filteredSales.length) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="13" class="py-10 px-4 text-center text-slate-400 dark:text-slate-500">
+              Nenhum lançamento encontrado com os filtros atuais. Clique em <strong>Nova Venda</strong> para registrar.
+            </td>
+          </tr>
+        `;
+        tfoot.innerHTML = '';
+        return;
+      }
+
+      filteredSales.forEach((sale) => {
+        const m = computeSaleMetrics(sale);
+        const profitClass = m.netProfit >= 0
+          ? 'text-brand-600 dark:text-brand-400 font-bold'
+          : 'text-rose-600 dark:text-rose-400 font-bold';
+
+        const marginClass = m.marginPct >= 20
+          ? 'bg-brand-100 text-brand-800 dark:bg-brand-950 dark:text-brand-300'
+          : m.marginPct >= 0
+          ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+          : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300';
+
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50/90 dark:hover:bg-slate-800/40 transition';
+        tr.innerHTML = `
+          <td class="py-3 px-3.5 whitespace-nowrap text-slate-600 dark:text-slate-300">${formatDateBR(sale.date)}</td>
+          <td class="py-3 px-3.5 font-semibold text-slate-900 dark:text-white">${escapeHTML(sale.item)}</td>
+          <td class="py-3 px-3.5 whitespace-nowrap">
+            <span class="px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+              ${escapeHTML(sale.channel || '-')}
+            </span>
+          </td>
+          <td class="py-3 px-3.5 whitespace-nowrap text-slate-600 dark:text-slate-300">${escapeHTML(sale.material || '-')}</td>
+          <td class="py-3 px-3.5 text-right whitespace-nowrap font-semibold text-slate-900 dark:text-white">${formatBRL(m.gross)}</td>
+          <td class="py-3 px-3.5 text-right whitespace-nowrap text-slate-500 dark:text-slate-400">${formatBRL(m.fees)}</td>
+          <td class="py-3 px-3.5 text-right whitespace-nowrap text-slate-500 dark:text-slate-400">${formatBRL(m.materialCost)}</td>
+          <td class="py-3 px-3.5 text-right whitespace-nowrap text-slate-500 dark:text-slate-400">${formatBRL(m.energyCost)}</td>
+          <td class="py-3 px-3.5 text-right whitespace-nowrap text-amber-600 dark:text-amber-400">${formatBRL(m.laborCost)}</td>
+          <td class="py-3 px-3.5 text-right whitespace-nowrap text-rose-600 dark:text-rose-400">${formatBRL(m.costsTotal)}</td>
+          <td class="py-3 px-3.5 text-right whitespace-nowrap ${profitClass}">${formatBRL(m.netProfit)}</td>
+          <td class="py-3 px-3.5 text-right whitespace-nowrap">
+            <span class="px-2 py-0.5 rounded-full text-xs font-bold ${marginClass}">${formatPct(m.marginPct)}</span>
+          </td>
+          <td class="py-3 px-3.5 text-center whitespace-nowrap">
+            <div class="inline-flex items-center gap-1">
+              <button type="button" data-action="edit" data-id="${escapeHTML(sale.id)}" title="Editar"
+                class="p-1.5 rounded-lg text-slate-600 hover:text-brand-600 hover:bg-brand-50 dark:text-slate-300 dark:hover:bg-slate-800 transition cursor-pointer">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </button>
+              <button type="button" data-action="duplicate" data-id="${escapeHTML(sale.id)}" title="Duplicar"
+                class="p-1.5 rounded-lg text-slate-600 hover:text-blue-600 hover:bg-blue-50 dark:text-slate-300 dark:hover:bg-slate-800 transition cursor-pointer">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </button>
+              <button type="button" data-action="delete" data-id="${escapeHTML(sale.id)}" title="Excluir"
+                class="p-1.5 rounded-lg text-slate-600 hover:text-rose-600 hover:bg-rose-50 dark:text-slate-300 dark:hover:bg-slate-800 transition cursor-pointer">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      const totalMarginPct = agg.gross > 0 ? (agg.netProfit / agg.gross) * 100 : 0;
+      tfoot.innerHTML = `
+        <tr>
+          <td colspan="4" class="py-3 px-3.5 text-slate-700 dark:text-slate-200">
+            TOTAIS (${agg.count} ${agg.count === 1 ? 'venda' : 'vendas'})
+          </td>
+          <td class="py-3 px-3.5 text-right text-slate-900 dark:text-white">${formatBRL(agg.gross)}</td>
+          <td class="py-3 px-3.5 text-right text-slate-600 dark:text-slate-300">${formatBRL(agg.fees)}</td>
+          <td class="py-3 px-3.5 text-right text-slate-600 dark:text-slate-300">${formatBRL(agg.materialCost)}</td>
+          <td class="py-3 px-3.5 text-right text-slate-600 dark:text-slate-300">${formatBRL(agg.energyCost)}</td>
+          <td class="py-3 px-3.5 text-right text-amber-600 dark:text-amber-400">${formatBRL(agg.laborCost)}</td>
+          <td class="py-3 px-3.5 text-right text-rose-600 dark:text-rose-400">${formatBRL(agg.costsTotal)}</td>
+          <td class="py-3 px-3.5 text-right ${agg.netProfit >= 0 ? 'text-brand-600 dark:text-brand-400' : 'text-rose-600 dark:text-rose-400'}">
+            ${formatBRL(agg.netProfit)}
+          </td>
+          <td class="py-3 px-3.5 text-right text-indigo-600 dark:text-indigo-400">${formatPct(totalMarginPct)}</td>
+          <td></td>
+        </tr>
+      `;
+    }
+
+    /**
+     * Renderiza ou atualiza o gráfico de distribuição do faturamento via Chart.js.
+     */
+    function renderChart(agg = null) {
+      const canvas = document.getElementById('financeChart');
+      if (!canvas || typeof Chart === 'undefined') return;
+
+      const currentAgg = agg || computeAggregateMetrics(getFilteredSales());
+      const isDark = document.documentElement.classList.contains('dark');
+      const textColor = isDark ? '#e2e8f0' : '#334155';
+      const borderColor = isDark ? '#0f172a' : '#ffffff';
+
+      const values = [
+        Math.max(0, currentAgg.netProfit),
+        Math.max(0, currentAgg.laborCost),
+        Math.max(0, currentAgg.materialCost),
+        Math.max(0, currentAgg.energyCost),
+        Math.max(0, currentAgg.fees)
+      ];
+
+      const labels = [
+        'Lucro Líquido',
+        'Mão de Obra',
+        'Material + Insumos',
+        'Energia + Manut.',
+        'Taxas / Frete'
+      ];
+
+      const colors = [
+        '#10b981', // Esmeralda (Lucro)
+        '#f59e0b', // Âmbar (Mão de obra)
+        '#3b82f6', // Azul (Material)
+        '#8b5cf6', // Roxo (Energia/Manutenção)
+        '#f43f5e'  // Rosa/Vermelho (Taxas/Frete)
+      ];
+
+      if (state.chartInstance) {
+        state.chartInstance.destroy();
+      }
+
+      state.chartInstance = new Chart(canvas.getContext('2d'), {
+        type: 'doughnut',
+        data: {
+          labels,
+          datasets: [{
+            data: values,
+            backgroundColor: colors,
+            borderColor,
+            borderWidth: 2,
+            hoverOffset: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '62%',
+          plugins: {
+            legend: {
+              position: window.innerWidth < 640 ? 'bottom' : 'right',
+              labels: {
+                color: textColor,
+                usePointStyle: true,
+                padding: 14,
+                font: {
+                  family: 'Inter, sans-serif',
+                  size: 12,
+                  weight: '500'
+                }
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  const val = Number(ctx.raw) || 0;
+                  const total = currentAgg.gross || 1;
+                  const share = (val / total) * 100;
+                  return ` ${ctx.label}: ${formatBRL(val)} (${formatPct(share)} do bruto)`;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function refreshAll() {
+      syncFilterOptions();
+      const filtered = getFilteredSales();
+      const agg = computeAggregateMetrics(filtered);
+      renderKPIs(agg);
+      renderTable(filtered, agg);
+      renderChart(agg);
+    }
+
+    // =====================================================================
+    // FORMULÁRIO DE LANÇAMENTO / EDIÇÃO & CALCULADORA RÁPIDA
+    // =====================================================================
+    function updateFormLivePreview() {
+      const gross = parseNum('saleGross');
+      const fees = parseNum('saleFees');
+      const mat = parseNum('saleMaterialCost');
+      const en = parseNum('saleEnergyCost');
+      const labor = parseNum('saleLaborCost');
+
+      const costs = fees + mat + en;
+      const profit = gross - costs - labor;
+      const margin = gross > 0 ? (profit / gross) * 100 : 0;
+
+      document.getElementById('previewCosts').textContent = formatBRL(costs);
+      const profitEl = document.getElementById('previewProfit');
+      profitEl.textContent = formatBRL(profit);
+      profitEl.className = 'ml-1 ' + (profit >= 0 ? 'text-brand-600 dark:text-brand-400' : 'text-rose-600 dark:text-rose-400');
+      document.getElementById('previewMargin').textContent = formatPct(margin);
+    }
+
+    function resetForm(keepDate = true) {
+      const prevDate = document.getElementById('saleDate').value;
+      document.getElementById('editingId').value = '';
+      document.getElementById('saleForm').reset();
+      document.getElementById('saleDate').value = keepDate && prevDate ? prevDate : getTodayISO();
+      document.getElementById('formBadge').textContent = 'NOVO LANÇAMENTO';
+      document.getElementById('formTitle').textContent = 'Registrar Venda de Impressão 3D';
+      document.getElementById('btnSubmitSale').textContent = 'Salvar Lançamento';
+      document.getElementById('btnCancelEdit').classList.add('hidden');
+      updateFormLivePreview();
+    }
+
+    function startEditSale(saleId) {
+      const sale = state.sales.find((s) => s.id === saleId);
+      if (!sale) return;
+
+      document.getElementById('editingId').value = sale.id;
+      document.getElementById('saleDate').value = sale.date || getTodayISO();
+      document.getElementById('saleItem').value = sale.item || '';
+      document.getElementById('saleChannel').value = sale.channel || '';
+      document.getElementById('saleMaterial').value = sale.material || '';
+      document.getElementById('saleGross').value = sale.gross ?? '';
+      document.getElementById('saleFees').value = sale.fees ?? '';
+      document.getElementById('saleMaterialCost').value = sale.materialCost ?? '';
+      document.getElementById('saleEnergyCost').value = sale.energyCost ?? '';
+      document.getElementById('saleLaborCost').value = sale.laborCost ?? '';
+
+      document.getElementById('formBadge').textContent = 'EDITANDO';
+      document.getElementById('formTitle').textContent = `Editando: ${sale.item}`;
+      document.getElementById('btnSubmitSale').textContent = 'Atualizar Lançamento';
+      document.getElementById('btnCancelEdit').classList.remove('hidden');
+
+      updateFormLivePreview();
+      document.getElementById('saleFormCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function duplicateSale(saleId) {
+      const original = state.sales.find((s) => s.id === saleId);
+      if (!original) return;
+
+      const copy = {
+        ...original,
+        id: `sale-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        date: getTodayISO(),
+        item: `${original.item} (Cópia)`
+      };
+
+      state.sales.unshift(copy);
+      saveSales();
+      refreshAll();
+      showToast('Lançamento duplicado com data de hoje.', 'success');
+    }
+
+    function deleteSale(saleId) {
+      const sale = state.sales.find((s) => s.id === saleId);
+      if (!sale) return;
+
+      openConfirmModal(
+        'Excluir lançamento',
+        `Deseja realmente remover "${sale.item}" (${formatBRL(sale.gross)})? Essa ação não pode ser desfeita.`,
+        () => {
+          state.sales = state.sales.filter((s) => s.id !== saleId);
+          saveSales();
+          if (document.getElementById('editingId').value === saleId) {
+            resetForm();
+          }
+          refreshAll();
+          showToast('Lançamento excluído.', 'info');
+        }
+      );
+    }
+
+    // Calculadora Rápida
+    function getCalcValues() {
+      const grams = parseNum('calcGrams');
+      const kgPrice = parseNum('calcKgPrice');
+      const wasteFactor = 1 + ((Number(state.settings.wastePercent) || 0) / 100);
+      const materialEst = (grams / 1000) * kgPrice * wasteFactor;
+
+      const printHours = parseNum('calcPrintHours');
+      const hourlyRate = parseNum('calcHourlyRate');
+      const energyEst = printHours * hourlyRate;
+
+      const workMinutes = parseNum('calcWorkMinutes');
+      const laborRate = parseNum('calcLaborRate');
+      const laborEst = (workMinutes / 60) * laborRate;
+
+      return { materialEst, energyEst, laborEst };
+    }
+
+    function recalculateQuickCalc() {
+      const { materialEst, energyEst, laborEst } = getCalcValues();
+      document.getElementById('calcMaterialResult').textContent = formatBRL(materialEst);
+      document.getElementById('calcEnergyResult').textContent = formatBRL(energyEst);
+      document.getElementById('calcLaborResult').textContent = formatBRL(laborEst);
+    }
+
+    // =====================================================================
+    // EXPORTAÇÃO E IMPORTAÇÃO (JSON E CSV COMPATÍVEL COM EXCEL/SHEETS)
+    // =====================================================================
+    function downloadFile(content, filename, mimeType) {
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function exportJSON() {
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        app: 'A1 Mini Studio — Controle 3D',
+        settings: state.settings,
+        sales: state.sales
+      };
+      const dateStr = getTodayISO();
+      downloadFile(JSON.stringify(payload, null, 2), `controle-3d-backup-${dateStr}.json`, 'application/json');
+      showToast('Backup JSON exportado com sucesso.', 'success');
+    }
+
+    function importJSON(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const parsed = JSON.parse(event.target.result);
+          const importedSales = Array.isArray(parsed) ? parsed : parsed.sales;
+          if (!Array.isArray(importedSales)) {
+            throw new Error('Formato de arquivo inválido.');
+          }
+
+          openConfirmModal(
+            'Importar backup JSON',
+            `Foram encontrados ${importedSales.length} lançamento(s) no arquivo. Deseja substituir os dados atuais por este backup?`,
+            () => {
+              state.sales = importedSales.map((item, idx) => ({
+                id: item.id || `imp-${Date.now()}-${idx}`,
+                date: item.date || getTodayISO(),
+                item: item.item || 'Peça Importada',
+                channel: item.channel || 'WhatsApp',
+                material: item.material || 'PLA',
+                gross: Number(item.gross) || 0,
+                fees: Number(item.fees) || 0,
+                materialCost: Number(item.materialCost) || 0,
+                energyCost: Number(item.energyCost) || 0,
+                laborCost: Number(item.laborCost) || 0
+              }));
+
+              if (parsed.settings && typeof parsed.settings === 'object') {
+                state.settings = { ...DEFAULT_SETTINGS, ...parsed.settings };
+                saveSettingsToStorage();
+              }
+
+              saveSales();
+              syncCustomListsAndDefaults();
+              refreshAll();
+              showToast('Dados importados com sucesso!', 'success');
+            }
+          );
+        } catch (err) {
+          console.error('Erro ao importar JSON:', err);
+          showToast('Arquivo JSON inválido ou corrompido.', 'error');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    /**
+     * Gera CSV usando ponto-e-vírgula (;) e vírgula decimal (padrão Excel PT-BR)
+     * com BOM UTF-8 para abrir perfeitamente no Excel e Google Sheets.
+     */
+    function exportCSV() {
+      const headers = [
+        'Data',
+        'Peça / Projeto',
+        'Cliente / Canal',
+        'Material',
+        'Valor Bruto (R$)',
+        'Taxas / Frete (R$)',
+        'Material + Insumos (R$)',
+        'Energia + Manutenção (R$)',
+        'Mão de Obra (R$)',
+        'Custo Total (R$)',
+        'Lucro Líquido (R$)',
+        'Margem (%)'
+      ];
+
+      const fmtNumBR = (n) => (Number(n) || 0).toFixed(2).replace('.', ',');
+      const escapeCSV = (val) => `"${String(val ?? '').replace(/"/g, '""')}"`;
+
+      const rows = getFilteredSales().map((sale) => {
+        const m = computeSaleMetrics(sale);
+        return [
+          escapeCSV(formatDateBR(sale.date)),
+          escapeCSV(sale.item),
+          escapeCSV(sale.channel),
+          escapeCSV(sale.material),
+          escapeCSV(fmtNumBR(m.gross)),
+          escapeCSV(fmtNumBR(m.fees)),
+          escapeCSV(fmtNumBR(m.materialCost)),
+          escapeCSV(fmtNumBR(m.energyCost)),
+          escapeCSV(fmtNumBR(m.laborCost)),
+          escapeCSV(fmtNumBR(m.costsTotal)),
+          escapeCSV(fmtNumBR(m.netProfit)),
+          escapeCSV(fmtNumBR(m.marginPct))
+        ].join(';');
+      });
+
+      const csvContent = '\uFEFF' + [headers.map(escapeCSV).join(';'), ...rows].join('\n');
+      downloadFile(csvContent, `vendas-impressao-3d-${getTodayISO()}.csv`, 'text/csv;charset=utf-8;');
+      showToast('Planilha CSV exportada com sucesso!', 'success');
+    }
+
+    // =====================================================================
+    // REGISTRO DE EVENTOS DA INTERFACE
+    // =====================================================================
+    function bindEvents() {
+      // Tema claro/escuro
+      document.getElementById('btnToggleTheme').addEventListener('click', toggleTheme);
+
+      // Focar novo lançamento
+      document.getElementById('btnOpenNewSale').addEventListener('click', () => {
+        resetForm(true);
+        document.getElementById('saleFormCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        document.getElementById('saleItem').focus();
+      });
+
+      // Alternar calculadora rápida
+      document.getElementById('btnToggleCalculator').addEventListener('click', () => {
+        document.getElementById('quickCalcPanel').classList.toggle('hidden');
+        recalculateQuickCalc();
+      });
+
+      ['calcGrams', 'calcKgPrice', 'calcPrintHours', 'calcHourlyRate', 'calcWorkMinutes', 'calcLaborRate'].forEach((id) => {
+        document.getElementById(id).addEventListener('input', recalculateQuickCalc);
+      });
+
+      document.getElementById('btnApplyMaterial').addEventListener('click', () => {
+        const { materialEst } = getCalcValues();
+        document.getElementById('saleMaterialCost').value = materialEst.toFixed(2);
+        updateFormLivePreview();
+        showToast('Custo de material aplicado ao formulário.', 'info');
+      });
+
+      document.getElementById('btnApplyEnergy').addEventListener('click', () => {
+        const { energyEst } = getCalcValues();
+        document.getElementById('saleEnergyCost').value = energyEst.toFixed(2);
+        updateFormLivePreview();
+        showToast('Custo de energia/manutenção aplicado.', 'info');
+      });
+
+      document.getElementById('btnApplyLabor').addEventListener('click', () => {
+        const { laborEst } = getCalcValues();
+        document.getElementById('saleLaborCost').value = laborEst.toFixed(2);
+        updateFormLivePreview();
+        showToast('Valor de mão de obra aplicado.', 'info');
+      });
+
+      // Prévia em tempo real no formulário
+      ['saleGross', 'saleFees', 'saleMaterialCost', 'saleEnergyCost', 'saleLaborCost'].forEach((id) => {
+        document.getElementById(id).addEventListener('input', updateFormLivePreview);
+      });
+
+      // Submissão do formulário (criar ou atualizar)
+      document.getElementById('saleForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+
+        const item = document.getElementById('saleItem').value.trim();
+        const date = document.getElementById('saleDate').value || getTodayISO();
+        const channel = document.getElementById('saleChannel').value.trim() || 'Encomenda Direta';
+        const material = document.getElementById('saleMaterial').value.trim() || 'PLA';
+        const gross = parseNum('saleGross');
+        const fees = parseNum('saleFees');
+        const materialCost = parseNum('saleMaterialCost');
+        const energyCost = parseNum('saleEnergyCost');
+        const laborCost = parseNum('saleLaborCost');
+
+        if (!item) {
+          showToast('Informe o nome da peça ou projeto.', 'error');
+          return;
+        }
+
+        const editingId = document.getElementById('editingId').value;
+
+        if (editingId) {
+          const idx = state.sales.findIndex((s) => s.id === editingId);
+          if (idx !== -1) {
+            state.sales[idx] = {
+              ...state.sales[idx],
+              date,
+              item,
+              channel,
+              material,
+              gross,
+              fees,
+              materialCost,
+              energyCost,
+              laborCost
+            };
+            showToast('Lançamento atualizado com sucesso!', 'success');
+          }
+        } else {
+          state.sales.unshift({
+            id: `sale-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            date,
+            item,
+            channel,
+            material,
+            gross,
+            fees,
+            materialCost,
+            energyCost,
+            laborCost
+          });
+          showToast('Nova venda registrada!', 'success');
+        }
+
+        saveSales();
+        resetForm(true);
+        refreshAll();
+      });
+
+      document.getElementById('btnClearForm').addEventListener('click', () => resetForm(true));
+      document.getElementById('btnCancelEdit').addEventListener('click', () => resetForm(true));
+
+      // Delegação de eventos na tabela (Editar / Duplicar / Excluir)
+      document.getElementById('salesTableBody').addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-action]');
+        if (!btn) return;
+        const action = btn.getAttribute('data-action');
+        const id = btn.getAttribute('data-id');
+
+        if (action === 'edit') startEditSale(id);
+        else if (action === 'duplicate') duplicateSale(id);
+        else if (action === 'delete') deleteSale(id);
+      });
+
+      // Filtros
+      document.getElementById('filterSearch').addEventListener('input', refreshAll);
+      document.getElementById('filterChannel').addEventListener('change', refreshAll);
+      document.getElementById('filterMonth').addEventListener('change', refreshAll);
+      document.getElementById('btnResetFilters').addEventListener('click', () => {
+        document.getElementById('filterSearch').value = '';
+        document.getElementById('filterChannel').value = '';
+        document.getElementById('filterMonth').value = '';
+        refreshAll();
+      });
+
+      // Configurações
+      const openSettings = () => {
+        const panel = document.getElementById('settingsPanel');
+        panel.classList.remove('hidden');
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      };
+      document.getElementById('btnToggleSettings').addEventListener('click', () => {
+        document.getElementById('settingsPanel').classList.toggle('hidden');
+      });
+      document.getElementById('btnOpenSettingsFromCard').addEventListener('click', openSettings);
+      document.getElementById('btnCloseSettings').addEventListener('click', () => {
+        document.getElementById('settingsPanel').classList.add('hidden');
+      });
+
+      document.getElementById('btnSaveSettings').addEventListener('click', () => {
+        const filamentKgPrice = parseNum('cfgFilamentKg');
+        const wastePercent = parseNum('cfgWastePct');
+        const hourlyEnergyMaint = parseNum('cfgHourlyEnergyMaint');
+        const laborHourRate = parseNum('cfgLaborHour');
+
+        const channels = document.getElementById('cfgChannels').value
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean);
+
+        const materials = document.getElementById('cfgMaterials').value
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean);
+
+        state.settings = {
+          filamentKgPrice,
+          wastePercent,
+          hourlyEnergyMaint,
+          laborHourRate,
+          channels: channels.length ? channels : [...DEFAULT_SETTINGS.channels],
+          materials: materials.length ? materials : [...DEFAULT_SETTINGS.materials]
+        };
+
+        saveSettingsToStorage();
+        syncCustomListsAndDefaults();
+        refreshAll();
+        document.getElementById('settingsPanel').classList.add('hidden');
+        showToast('Configurações salvas!', 'success');
+      });
+
+      // Backup / Exemplos
+      document.getElementById('btnExportJson').addEventListener('click', exportJSON);
+      document.getElementById('inputImportJson').addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) {
+          importJSON(e.target.files[0]);
+          e.target.value = '';
+        }
+      });
+      document.getElementById('btnExportCsv').addEventListener('click', exportCSV);
+
+      document.getElementById('btnResetSamples').addEventListener('click', () => {
+        openConfirmModal(
+          'Carregar exemplos / Resetar dados',
+          'Isso substituirá os lançamentos atuais pelos exemplos demonstrativos de impressão 3D. Recomendamos exportar um JSON antes se já tiver vendas reais.',
+          () => {
+            state.sales = getSampleSales();
+            saveSales();
+            resetForm(true);
+            refreshAll();
+            showToast('Dados de exemplo carregados.', 'info');
+          }
+        );
+      });
+
+      // Modal de confirmação
+      document.getElementById('btnConfirmCancel').addEventListener('click', closeConfirmModal);
+      document.getElementById('btnConfirmOk').addEventListener('click', () => {
+        const cb = state.pendingConfirmCallback;
+        closeConfirmModal();
+        if (typeof cb === 'function') cb();
+      });
+    }
+
+    // =====================================================================
+    // BOOTSTRAP DA APLICAÇÃO
+    // =====================================================================
+    document.addEventListener('DOMContentLoaded', () => {
+      initTheme();
+      loadState();
+      document.getElementById('saleDate').value = getTodayISO();
+      syncCustomListsAndDefaults();
+      bindEvents();
+      updateFormLivePreview();
+      refreshAll();
+    });
+  </script>
+</body>
+</html>
