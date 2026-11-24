@@ -318,6 +318,23 @@
       <form id="saleForm" class="p-5 space-y-4">
         <input type="hidden" id="editingId" value="" />
 
+        <!-- Banner de destaque quando um pedido existente está sendo editado -->
+        <div id="editingBanner"
+          class="hidden flex-wrap items-center justify-between gap-3 px-4 py-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 text-xs sm:text-sm">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-extrabold uppercase tracking-wide bg-amber-500 text-white shrink-0">
+              Modo Edição
+            </span>
+            <span class="truncate">
+              Alterando pedido existente: <strong id="editingItemLabel" class="font-bold"></strong>. Ao salvar, KPIs, totais e gráfico serão recalculados na hora.
+            </span>
+          </div>
+          <button id="btnBannerCancelEdit" type="button"
+            class="px-3 py-1 rounded-lg text-xs font-semibold bg-white dark:bg-slate-900 hover:bg-amber-100 dark:hover:bg-slate-800 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700 transition cursor-pointer shrink-0">
+            Cancelar edição
+          </button>
+        </div>
+
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <!-- Data -->
           <div>
@@ -1236,20 +1253,21 @@
             <span class="px-2 py-0.5 rounded-full text-xs font-bold ${marginClass}">${formatPct(m.marginPct)}</span>
           </td>
           <td class="py-3 px-3.5 text-center whitespace-nowrap">
-            <div class="inline-flex items-center gap-1">
-              <button type="button" data-action="edit" data-id="${escapeHTML(sale.id)}" title="Editar"
-                class="p-1.5 rounded-lg text-slate-600 hover:text-brand-600 hover:bg-brand-50 dark:text-slate-300 dark:hover:bg-slate-800 transition cursor-pointer">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <div class="inline-flex items-center gap-1.5">
+              <button type="button" data-action="edit" data-id="${escapeHTML(sale.id)}" title="Editar pedido"
+                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/50 dark:hover:bg-amber-900/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 transition cursor-pointer">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
+                <span>Editar</span>
               </button>
-              <button type="button" data-action="duplicate" data-id="${escapeHTML(sale.id)}" title="Duplicar"
+              <button type="button" data-action="duplicate" data-id="${escapeHTML(sale.id)}" title="Duplicar pedido"
                 class="p-1.5 rounded-lg text-slate-600 hover:text-blue-600 hover:bg-blue-50 dark:text-slate-300 dark:hover:bg-slate-800 transition cursor-pointer">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                 </svg>
               </button>
-              <button type="button" data-action="delete" data-id="${escapeHTML(sale.id)}" title="Excluir"
+              <button type="button" data-action="delete" data-id="${escapeHTML(sale.id)}" title="Excluir pedido"
                 class="p-1.5 rounded-lg text-slate-600 hover:text-rose-600 hover:bg-rose-50 dark:text-slate-300 dark:hover:bg-slate-800 transition cursor-pointer">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -1402,11 +1420,63 @@
       document.getElementById('editingId').value = '';
       document.getElementById('saleForm').reset();
       document.getElementById('saleDate').value = keepDate && prevDate ? prevDate : getTodayISO();
-      document.getElementById('formBadge').textContent = 'NOVO LANÇAMENTO';
+
+      const formCard = document.getElementById('saleFormCard');
+      formCard.classList.remove('ring-2', 'ring-amber-400', 'dark:ring-amber-500');
+
+      const badge = document.getElementById('formBadge');
+      badge.textContent = 'NOVO LANÇAMENTO';
+      badge.className = 'px-2.5 py-1 rounded-lg text-xs font-bold bg-brand-100 text-brand-800 dark:bg-brand-950 dark:text-brand-300';
+
       document.getElementById('formTitle').textContent = 'Registrar Venda de Impressão 3D';
-      document.getElementById('btnSubmitSale').textContent = 'Salvar Lançamento';
+      document.getElementById('editingBanner').classList.add('hidden');
+      document.getElementById('editingBanner').classList.remove('flex');
+
+      const submitBtn = document.getElementById('btnSubmitSale');
+      submitBtn.textContent = 'Salvar Lançamento';
+      submitBtn.className = 'px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 shadow-sm transition cursor-pointer';
+
       document.getElementById('btnCancelEdit').classList.add('hidden');
       updateFormLivePreview();
+    }
+
+    function startEditSale(saleId) {
+      const sale = state.sales.find((s) => s.id === saleId);
+      if (!sale) return;
+
+      document.getElementById('editingId').value = sale.id;
+      document.getElementById('saleDate').value = sale.date || getTodayISO();
+      document.getElementById('saleItem').value = sale.item || '';
+      document.getElementById('saleChannel').value = sale.channel || '';
+      document.getElementById('saleMaterial').value = sale.material || '';
+      document.getElementById('saleGross').value = sale.gross ?? '';
+      document.getElementById('saleFees').value = sale.fees ?? '';
+      document.getElementById('saleMaterialCost').value = sale.materialCost ?? '';
+      document.getElementById('saleEnergyCost').value = sale.energyCost ?? '';
+      document.getElementById('saleLaborCost').value = sale.laborCost ?? '';
+
+      const formCard = document.getElementById('saleFormCard');
+      formCard.classList.add('ring-2', 'ring-amber-400', 'dark:ring-amber-500');
+
+      const badge = document.getElementById('formBadge');
+      badge.textContent = 'EDITANDO PEDIDO';
+      badge.className = 'px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300';
+
+      document.getElementById('formTitle').textContent = `Editando: ${sale.item}`;
+      document.getElementById('editingItemLabel').textContent = sale.item;
+
+      const banner = document.getElementById('editingBanner');
+      banner.classList.remove('hidden');
+      banner.classList.add('flex');
+
+      const submitBtn = document.getElementById('btnSubmitSale');
+      submitBtn.textContent = 'Salvar alterações';
+      submitBtn.className = 'px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-amber-600 hover:bg-amber-700 shadow-sm transition cursor-pointer';
+
+      document.getElementById('btnCancelEdit').classList.remove('hidden');
+
+      updateFormLivePreview();
+      formCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     function startEditSale(saleId) {
@@ -1725,7 +1795,7 @@
 
       document.getElementById('btnClearForm').addEventListener('click', () => resetForm(true));
       document.getElementById('btnCancelEdit').addEventListener('click', () => resetForm(true));
-
+      document.getElementById('btnBannerCancelEdit').addEventListener('click', () => resetForm(true));
       // Delegação de eventos na tabela (Editar / Duplicar / Excluir)
       document.getElementById('salesTableBody').addEventListener('click', (e) => {
         const btn = e.target.closest('button[data-action]');
